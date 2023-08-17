@@ -8,9 +8,9 @@ import shutil
 import multiprocessing
 import tqdm
 import copy
-from TestParser import TestParser
+from method2testkotlin.TestParser import TestParser
 
-
+        
 def analyze_project(repo_git, repo_id, grammar_file, tmp, output):
     """
     Analyze a single project
@@ -24,11 +24,11 @@ def analyze_project(repo_git, repo_id, grammar_file, tmp, output):
     # os.chdir(tmp)
     repo_path = os.path.join(tmp, str(repo_id))
     repo_out = os.path.join(output, str(repo_id))
-    # os.makedirs(repo_out, exist_ok=True)
-    #
-    # # Clone repo
-    # print("Cloning repository...")
-    # subprocess.call(['git', 'clone', repo_git, repo_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    os.makedirs(repo_out, exist_ok=True)
+
+    # Clone repo
+    print("Cloning repository...")
+    subprocess.call(['git', 'clone', repo_git, repo_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Run analysis
     language = 'kotlin'
@@ -36,8 +36,14 @@ def analyze_project(repo_git, repo_id, grammar_file, tmp, output):
     tot_mtc = find_map_test_cases(repo_path, grammar_file, language, repo_out, repo)
     (tot_tclass, tot_tc, tot_tclass_fclass, tot_mtc) = tot_mtc
 
-    # Delete
-    # shutil.rmtree(repo_path, ignore_errors=True)
+    # # Delete
+    # if os.path.exists(repo_out) and os.path.isdir(repo_out):
+    #     files = os.listdir(repo_out)
+    #     if len(files) == 1 and files[0] == 'log.txt':
+    #         print(f"Deleting the directory '{repo_out}' since it only contains log.txt.")
+    #         shutil.rmtree(repo_out, ignore_errors=True)
+    #         shutil.rmtree(repo_path, ignore_errors=True)
+
 
     # Print Stats
     print("---- Results ----")
