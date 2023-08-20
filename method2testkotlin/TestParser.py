@@ -22,7 +22,7 @@ class TestParser():
             except:
                 return list()
         tree = self.parser.parse(bytes(content, "utf8"))
-        classes = (node for node in tree.root_node.children if node.type == 'class_declaration')
+        classes = (node for node in tree.root_node.children if node.type == 'class_declaration'or node.type == 'function_declaration')
         # print(tree.root_node.sexp())
 
         # Parsed Classes
@@ -30,26 +30,112 @@ class TestParser():
 
         # Classes
         for _class in classes:
+            if _class.type == 'class_declaration':
 
-            # Class metadata
-            class_identifier = self.match_from_span(
-                [child for child in _class.children if child.type == 'type_identifier'][0], content).strip()
-            class_metadata = self.get_class_metadata(_class, content)
+                # Class metadata
+                class_identifier = self.match_from_span(
+                    [child for child in _class.children if child.type == 'type_identifier'][0], content).strip()
+                class_metadata = self.get_class_metadata(_class, content)
 
-            methods = list()
+                methods = list()
 
-            # Parse methods
-            for child in (child for child in _class.children if child.type == 'class_body'):
-                for _, node in enumerate(child.children):
-                    if node.type == 'function_declaration' or node.type == 'constructor_declaration':
-                        # Read Method metadata
-                        method_metadata = TestParser.get_function_metadata(class_identifier, node, content)
-                        methods.append(method_metadata)
+                # Parse methods
+                for child in (child for child in _class.children if child.type == 'class_body'):
+                    for _, node in enumerate(child.children):
+                        if node.type == 'function_declaration' or node.type == 'constructor_declaration':
+                            # Read Method metadata
+                            method_metadata = TestParser.get_function_metadata(class_identifier, node, content)
+                            methods.append(method_metadata)
 
-            class_metadata['methods'] = methods
-            parsed_classes.append(class_metadata)
+                class_metadata['methods'] = methods
+                parsed_classes.append(class_metadata)
+            elif _class.type == 'function_declaration':
+                class_identifier = 'nonamefunc'
+                function_node = _class
+                blob = content
+                method_metadata = TestParser.get_function_metadata4out(class_identifier, function_node, blob)
+                class_metadata = {'identifier': class_identifier, 'argument_list': '', 'methods': [method_metadata]}
 
+                parsed_classes.append(class_metadata)
         return parsed_classes
+
+    @staticmethod
+    def get_function_metadata4out(class_identifier, function_node, blob: str):
+        metadata = {
+            'identifier': '',
+            'parameters': '',
+            'modifiers': '',
+            'return': '',
+            'body': '',
+            'class': '',
+            'signature': '',
+            'full_signature': '',
+            'class_method_signature': '',
+            'testcase': '',
+            'constructor': '',
+        }
+        # Parameters
+        declarators = []
+        TestParser.traverse_type(function_node, declarators,
+                                 '{}_declaration'.format(function_node.type.split('_')[0]))
+        parameters = []
+        for n in function_node.children:
+            if n.type == 'simple_identifier':
+                metadata['identifier'] = TestParser.match_from_span(n, blob).strip('(')
+            elif n.type == 'function_value_parameters':
+                parameters.append(TestParser.match_from_span(n, blob))
+            elif n.type == 'function_body':
+                metadata['body'] = TestParser.match_from_span(n, blob)
+        metadata['parameters'] = ' '.join(parameters)
+
+        # Body
+        metadata['class'] = class_identifier
+
+        # Constructor
+        metadata['constructor'] = False
+        if "constructor" in function_node.type:
+            metadata['constructor'] = True
+
+        # Test Case
+        modifiers_node_list = TestParser.children_of_type(function_node, "modifiers")
+        metadata['testcase'] = False
+        for m in modifiers_node_list:
+            modifier = TestParser.match_from_span(m, blob)
+            if '@Test' in modifier:
+                metadata['testcase'] = True
+
+        # Method Invocations
+        invocation = []
+        method_invocations = list()
+        TestParser.traverse_type(function_node, invocation, 'call_expression')
+        for inv in invocation:
+            possible_name_nodes = []
+            TestParser.traverse_type(inv, possible_name_nodes, 'simple_identifier')
+            if len(possible_name_nodes) == 0:
+                continue
+            name = possible_name_nodes[-1]
+            method_invocation = TestParser.match_from_span(name, blob)
+            method_invocations.append(method_invocation)
+        metadata['invocations'] = method_invocations
+
+        # Modifiers and Return Value
+        return_found = False
+        for child in function_node.children:
+            if child.type == "modifiers":
+                metadata['modifiers'] = ' '.join(TestParser.match_from_span(child, blob).split())
+            if child.type == ':':
+                metadata['return'] = child.next_sibling.text
+                return_found = True
+        if not return_found:
+            metadata['return'] = 'Unit'
+        # Signature
+        metadata['signature'] = '{} {}{}'.format(metadata['return'], metadata['identifier'],
+                                                 metadata['parameters'])
+        metadata['full_signature'] = '{} {} {}{}'.format(metadata['modifiers'], metadata['return'],
+                                                         metadata['identifier'], metadata['parameters'])
+        metadata['class_method_signature'] = '{}.{}{}'.format(class_identifier, metadata['identifier'],
+                                                              metadata['parameters'])
+        return metadata
 
     @staticmethod
     def get_class_metadata(class_node, blob: str):
@@ -84,7 +170,7 @@ class TestParser():
                     metadata['identifier'] = TestParser.match_from_span(n, blob).strip('(:')
                 elif n.type == 'function_value_parameters':
                     metadata['argument_list'] = TestParser.match_from_span(n, blob)
-            if n.type == 'class':
+            if n.type == 'class' or 'interface':
                 is_header = True
             # elif n.type == ':':
             #     break
@@ -183,6 +269,8 @@ class TestParser():
         for inv in invocation:
             possible_name_nodes = []
             TestParser.traverse_type(inv, possible_name_nodes, 'simple_identifier')
+            if len(possible_name_nodes)==0:
+                continue
             name = possible_name_nodes[-1]
             method_invocation = TestParser.match_from_span(name, blob)
             method_invocations.append(method_invocation)
@@ -195,6 +283,7 @@ class TestParser():
                 metadata['modifiers'] = ' '.join(TestParser.match_from_span(child, blob).split())
             if ("type" in child.type):
                 metadata['return'] = TestParser.match_from_span(child, blob)
+                return_found =True
         if not return_found:
             metadata['return'] = 'Unit'
         # Signature

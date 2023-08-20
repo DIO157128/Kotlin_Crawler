@@ -130,9 +130,10 @@ def find_map_test_cases(root, grammar_file, language, output, repo):
         test_cases = parse_test_cases(parser, test)
         focal_methods = parse_potential_focal_methods(parser, focal)
         tot_tc += len(test_cases)
-
-        mtc = match_test_cases(test, focal, test_cases, focal_methods, log)
-
+        if len(focal_methods)!=0:
+            mtc = match_test_cases(test, focal, test_cases, focal_methods, log)
+        else:
+            mtc = []
         mtc_size = len(mtc)
         tot_mtc += mtc_size
         if mtc_size > 0:

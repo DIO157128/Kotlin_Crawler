@@ -3,8 +3,9 @@ import os
 import subprocess
 import time
 import requests
-from method2testkotlin.find_map_test_cases import analyze_project
 import json
+
+from method2testkotlin.find_map_test_cases import analyze_project
 
 
 def search_github_projects(query, language, num_pages=1,start=1):
@@ -59,9 +60,37 @@ def get_data():
     grammar_file = '/home/featurize/Kotlin_Crawler/method2testkotlin/kotlin.so'
     # search_github_projects('kotlin', 'Kotlin', num_pages=100)
     urls = read_json_file("github_projects.json")
+    log = open('log.txt','a',encoding ='utf-8')
     for repo_id, repo in enumerate(urls):
+        if repo_id<511:
+            continue
         print(repo_id)
-        analyze_project(repo['url'],repo_id,grammar_file,tmp,output)
+        try:
+            analyze_project(repo['url'],repo_id,grammar_file,tmp,output)
+        except Exception:
+            log.write(str(repo_id)+'\n')
+            continue
+
+def get_data4test():
+    tmp = '/root/ybw/pycharmremote/method2testkotlin/tmpnew/tmp'
+    output = '/root/ybw/pycharmremote/method2testkotlin/tmpnew/output'
+    grammar_file = '/root/ybw/pycharmremote/method2testkotlin/kotlin.so'
+    # search_github_projects('kotlin', 'Kotlin', num_pages=100)
+    urls = read_json_file("github_projects.json")
+    log = open('log.txt','r',encoding ='utf-8')
+    lines = log.read().splitlines()
+    lines = [int(l) for l in lines]
+    for repo_id, repo in enumerate(urls):
+        if repo_id not in lines:
+            continue
+        print(repo_id)
+        print(repo)
+        try:
+            analyze_project(repo['url'],repo_id,grammar_file,tmp,output)
+        except Exception:
+            log.write(str(repo_id)+'\n')
+            continue
+
 
 def gatherdata(path):
     data = []
@@ -82,4 +111,5 @@ def gatherdata(path):
 if __name__ == '__main__':
     # search_github_projects('kotlin', 'Kotlin', num_pages=10,start=1)
     # get_data()
-    gatherdata('method2testkotlin/tmpnew/output')
+    # gatherdata('method2testkotlin/tmpnew/output')
+    get_data4test()
