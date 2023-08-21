@@ -124,7 +124,7 @@ class TestParser():
             if child.type == "modifiers":
                 metadata['modifiers'] = ' '.join(TestParser.match_from_span(child, blob).split())
             if child.type == ':':
-                metadata['return'] = child.next_sibling.text
+                metadata['return'] = TestParser.match_from_span(child.next_sibling, blob)
                 return_found = True
         if not return_found:
             metadata['return'] = 'Unit'
