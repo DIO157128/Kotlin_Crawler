@@ -36,6 +36,7 @@ def analyze_project(repo_git, repo_id, grammar_file, tmp, output):
     tot_mtc = find_map_test_cases(repo_path, grammar_file, language, repo_out, repo)
     (tot_tclass, tot_tc, tot_tclass_fclass, tot_mtc) = tot_mtc
 
+    shutil.rmtree(repo_path, ignore_errors=True)
     # # Delete
     # if os.path.exists(repo_out) and os.path.isdir(repo_out):
     #     files = os.listdir(repo_out)
@@ -72,7 +73,7 @@ def find_map_test_cases(root, grammar_file, language, output, repo):
     # Test Classes
     try:
         result = subprocess.check_output(r'grep -l -r @Test --include \*.kt', shell=True)
-        tests = result.decode('ascii').splitlines()
+        tests = result.decode('utf-8').splitlines()
     except:
         log.write("Error during grep" + '\n')
         return 0, 0, 0, 0
@@ -80,7 +81,7 @@ def find_map_test_cases(root, grammar_file, language, output, repo):
     # Java Files
     try:
         result = subprocess.check_output(['find', '-name', '*.kt'])
-        java = result.decode('ascii').splitlines()
+        java = result.decode('utf-8').splitlines()
         java = [j.replace("./", "") for j in java]
     except:
         log.write("Error during find" + '\n')
